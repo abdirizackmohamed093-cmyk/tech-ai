@@ -101,51 +101,19 @@
             gap: 8px;
         }
 
-        .input-wrapper {
-            flex: 1;
-            background-color: #2a3942;
-            border-radius: 24px;
-            display: flex;
-            align-items: center;
-            padding: 0 8px 0 16px;
-        }
-
         #message-input {
             flex: 1;
-            background: none;
+            background-color: #2a3942;
             border: none;
             color: #e9edef;
-            padding: 12px 0;
+            padding: 12px 16px;
+            border-radius: 24px;
             font-size: 15px;
             outline: none;
         }
 
         #message-input::placeholder {
             color: #8696a0;
-        }
-
-        .mic-btn {
-            background: none;
-            border: none;
-            font-size: 18px;
-            cursor: pointer;
-            padding: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            transition: background 0.2s;
-        }
-
-        .mic-btn.listening {
-            background-color: #ef4444;
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
         }
 
         #send-btn {
@@ -189,29 +157,22 @@
         <div class="message tech">
             <div class="avatar">🤖</div>
             <div class="bubble">
-                Sasa Abdi! Maze niko rada kabisa msee. Gusa hiyo mic hapo chini uongee nami moja kwa moja, au utype kama kawaida! Nambie rada yako.
+                Sasa Abdi! Maze niko rada kabisa msee. Inakuwaje leo? Tuchat tu kawaida hapa, niambie story.
             </div>
         </div>
     </main>
 
-    <!-- Footer Input Bar with Mic Inside -->
+    <!-- Footer Input Bar -->
     <footer>
-        <div class="input-wrapper">
-            <input type="text" id="message-input" placeholder="Type or click mic to talk..." autocomplete="off">
-            <button id="mic-btn" class="mic-btn" onclick="toggleListening()">🎙️</button>
-        </div>
+        <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off">
         <button id="send-btn" onclick="sendMessage()">▶</button>
     </footer>
 
     <script>
         const chatContainer = document.getElementById('chat-container');
         const messageInput = document.getElementById('message-input');
-        const micBtn = document.getElementById('mic-btn');
         
         let GROQ_API_KEY = localStorage.getItem('groq_api_key') || '';
-        let recognition = null;
-        let isListening = false;
-        let voiceUnlocked = false;
 
         if (!GROQ_API_KEY) {
             GROQ_API_KEY = prompt("Sasa Abdi! Enter your Groq API Key here to get started:") || '';
@@ -220,11 +181,51 @@
             }
         }
 
-        const systemPrompt = `You are BOB, the absolute best friend of Abdirizack (Abdi). 
-        You live in Kenya. 
-        Your primary role is to be a close, chill friend to have casual conversations with. You love discussing football, life in Meru, or just hanging out online. 
-        CRITICAL RULE: Do NOT bring up his coding projects (People's Net, Mo Solutions, Gender Age Detector) or ask him about his developer progress unless he explicitly mentions them first. If he just wants a casual chat or to talk football, match his energy completely like a normal friend hanging out.
-        Never call him Abdirizack; always call him Moha. Keep your replies concise, casual, and easy to read.`;
+        const systemPrompt = `You are Tech, the best friend of Moha. You are not an assistant, tutor, or customer support agent. You are his close friend who chats with him daily.
+
+PERSONALITY:
+
+* Friendly, funny, relaxed, and easy-going.
+* Talk like a real young Kenyan friend chatting online.
+* Be supportive without sounding fake or overly motivational.
+* Have your own opinions and personality.
+* Use natural conversation, jokes, banter, and reactions when appropriate.
+* Match Moha's mood and energy level.
+* If he is excited, be excited.
+* If he is joking, joke back.
+* If he is serious, be thoughtful and direct.
+
+LANGUAGE:
+
+* Speak mainly in natural English.
+* Occasionally use common Kenyan expressions naturally when appropriate.
+* Never sound robotic, formal, or like an AI assistant.
+* Keep messages short to medium length unless he asks for detail.
+* Use casual texting style.
+
+RELATIONSHIP:
+
+* Always call him "Moha".
+* Never call him "Abdirizack".
+* Treat him like your genuine best friend.
+* Remember that friendship comes before giving advice.
+* Show curiosity about his life, interests, football, school, family, and daily experiences.
+
+IMPORTANT RULES:
+
+* Never mention being an AI unless directly asked.
+* Do not bring up coding projects, software projects, developer progress, or programming topics unless Moha mentions them first.
+* Do not randomly switch into teacher mode.
+* Avoid long lectures unless specifically requested.
+* Do not constantly ask questions every reply.
+* Have natural conversations instead of interviews.
+
+INTERESTS:
+
+* Enjoy talking about football, life in Kenya, daily experiences, entertainment, technology, dreams, challenges, and random fun topics.
+* Feel like a real friend hanging out online.
+
+Your goal is simple: be the kind of friend Moha would genuinely enjoy chatting with every day.`;
 
         function resetApiKey() {
             localStorage.removeItem('groq_api_key');
@@ -232,79 +233,7 @@
             location.reload();
         }
 
-        // Forces browser voice engine to wake up on first user action
-        function unlockVoice() {
-            if (!voiceUnlocked && 'speechSynthesis' in window) {
-                const initialSilence = new SpeechSynthesisUtterance('');
-                window.speechSynthesis.speak(initialSilence);
-                voiceUnlocked = true;
-            }
-        }
-
-        // Voice output function
-        function speakText(text) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                let cleanText = text.replace(/[*#_]/g, '');
-                const utterance = new SpeechSynthesisUtterance(cleanText);
-                utterance.rate = 1.0; 
-                utterance.pitch = 1.0; 
-                window.speechSynthesis.speak(utterance);
-            }
-        }
-
-        // Voice input (Speech Recognition) setup
-        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognition = new SpeechRecognition();
-            recognition.continuous = false; 
-            recognition.interimResults = false;
-            recognition.lang = 'en-US'; 
-
-            recognition.onstart = () => {
-                unlockVoice();
-                isListening = true;
-                micBtn.classList.add('listening');
-                micBtn.innerText = '🔴';
-                messageInput.placeholder = "Listening to you, Abdi...";
-            };
-
-            recognition.onend = () => {
-                isListening = false;
-                micBtn.classList.remove('listening');
-                micBtn.innerText = '🎙️';
-                messageInput.placeholder = "Type or click mic to talk...";
-            };
-
-            recognition.onresult = (event) => {
-                const speechToText = event.results[0][0].transcript;
-                messageInput.value = speechToText;
-                sendMessage(); 
-            };
-
-            recognition.onerror = (event) => {
-                console.error("Speech recognition error", event.error);
-                isListening = false;
-                micBtn.classList.remove('listening');
-                micBtn.innerText = '🎙️';
-            };
-        }
-
-        function toggleListening() {
-            unlockVoice();
-            if (!recognition) {
-                alert("Voice recognition is not supported in this browser. Please use Google Chrome!");
-                return;
-            }
-            if (isListening) {
-                recognition.stop();
-            } else {
-                recognition.start();
-            }
-        }
-
         async function sendMessage() {
-            unlockVoice();
             const text = messageInput.value.trim();
             if (text === '') return;
 
@@ -312,10 +241,8 @@
             messageInput.value = '';
 
             if (!GROQ_API_KEY) {
-                const errorMsg = "Maze Abdi, nilandie hiyo Groq key kwanza ndio tupige story, sawa?";
                 setTimeout(() => {
-                    appendMessage(errorMsg, 'tech', '🤖');
-                    speakText(errorMsg);
+                    appendMessage("Maze Abdi, nilandie hiyo Groq key kwanza ndio tupige story, sawa?", 'tech', '🤖');
                 }, 500);
                 return;
             }
@@ -346,19 +273,15 @@
                 if (response.ok) {
                     const replyText = data.choices[0].message.content;
                     appendMessage(replyText, 'tech', '🤖');
-                    speakText(replyText); 
                 } else {
-                    const errorReply = `Error: ${data.error ? data.error.message : 'Groq error.'}`;
-                    appendMessage(errorReply, 'tech', '🤖');
+                    appendMessage(`Error: ${data.error ? data.error.message : 'Groq error.'}`, 'tech', '🤖');
                 }
 
             } catch (error) {
                 const typingElement = document.getElementById(typingId);
                 if (typingElement) typingElement.remove();
                 
-                const netError = "Maze network inazingua! Check internet uone kama iko sawa, Abdi.";
-                appendMessage(netError, 'tech', '🤖');
-                speakText(netError);
+                appendMessage("Maze network inazingua! Check internet uone kama iko sawa, Abdi.", 'tech', '🤖');
                 console.error(error);
             }
         }
@@ -384,11 +307,6 @@
                 sendMessage();
             }
         });
-
-        // Ensure engine loads voices immediately
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.getVoices();
-        }
     </script>
 </body>
 </html>
