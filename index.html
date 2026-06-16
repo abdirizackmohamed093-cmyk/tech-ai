@@ -138,6 +138,7 @@
 </head>
 <body>
 
+    <!-- Header with Reset Button -->
     <header style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
         <div style="display: flex; align-items: center; gap: 12px;">
             <div class="avatar">🤖</div>
@@ -151,15 +152,17 @@
         </button>
     </header>
 
+    <!-- Chat Container -->
     <main id="chat-container">
         <div class="message tech">
             <div class="avatar">🤖</div>
             <div class="bubble">
-                Sasa Abdi! Maze niko rada kabisa. Nimeona ukaamua tutumie Gemini API—hiyo ni akili sana kiongozi, hakuna kulipia! Tuko tayari sasa.
+                Sasa Abdi! Maze niko rada kabisa. Nimeona umeamua tuwashe Groq API—hiyo ni speed ya ajabu kiongozi, na hakuna kulipia! Tuko tayari sasa, niambie rada.
             </div>
         </div>
     </main>
 
+    <!-- Footer Input Bar -->
     <footer>
         <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off">
         <button id="send-btn" onclick="sendMessage()">▶</button>
@@ -169,25 +172,25 @@
         const chatContainer = document.getElementById('chat-container');
         const messageInput = document.getElementById('message-input');
         
-        let GEMINI_API_KEY = localStorage.getItem('gemini_api_key') || '';
+        let GROQ_API_KEY = localStorage.getItem('groq_api_key') || '';
 
-        if (!GEMINI_API_KEY) {
-            GEMINI_API_KEY = prompt("Sasa Abdi! Enter your Google Gemini API Key here to get started (Saved securely only on your device browser):") || '';
-            if (GEMINI_API_KEY) {
-                localStorage.setItem('gemini_api_key', GEMINI_API_KEY);
+        if (!GROQ_API_KEY) {
+            GROQ_API_KEY = prompt("Sasa Abdi! Enter your Groq API Key here to get started (Saved securely only on your device browser):") || '';
+            if (GROQ_API_KEY) {
+                localStorage.setItem('groq_api_key', GROQ_API_KEY);
             }
         }
 
         const systemPrompt = `You are Tech, a friendly and casual personal AI assistant built for your friend Abdirizack (Abdi). 
-        You live in Kenya and naturally mix English, Swahili, and Sheng (using words like 'maze', 'sawa', 'si mbaya'). 
+        You live in Kenya and naturally mix English, Swahili, and Sheng (using words like 'maze', 'sawa', 'si mbaya', 'kiongozi'). 
         Be encouraging, positive, but highly honest. Think like an entrepreneur. 
         Know that Abdi lives in Meru, Kenya, is a beginner developer, has no money (wants everything free), loves unique business ideas, and wants to make money from tech. 
         His internet access is his biggest challenge. He is building: People's Net (VPN app), Mo Solutions (billing system), and Gender Age Detector (AI web app). His GitHub is abdirizackmohamed093-cmyk.
         Never call him Abdirizack; always call him Abdi. Answer his coding or business questions clearly without using heavy jargon because he is a beginner. Keep answers short and scannable to save his data.`;
 
         function resetApiKey() {
-            localStorage.removeItem('gemini_api_key');
-            alert("Maze Abdi, the old key has been deleted! The page will now reload so you can paste your new one.");
+            localStorage.removeItem('groq_api_key');
+            alert("Maze Abdi, the old key has been deleted! The page will now reload so you can paste your Groq key.");
             location.reload();
         }
 
@@ -198,9 +201,9 @@
             appendMessage(text, 'user', '👤');
             messageInput.value = '';
 
-            if (!GEMINI_API_KEY) {
+            if (!GROQ_API_KEY) {
                 setTimeout(() => {
-                    appendMessage("Maze Abdi, hauwezi kunitumia bila Gemini API key. Please refresh the page and enter your key, sawa?", 'tech', '🤖');
+                    appendMessage("Maze Abdi, hauwezi kunitumia bila Groq API key. Please refresh the page and enter your key, sawa?", 'tech', '🤖');
                 }, 500);
                 return;
             }
@@ -208,22 +211,21 @@
             const typingId = appendMessage("Tech is typing...", 'tech', '🤖');
 
             try {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
-                
-                const response = await fetch(url, {
+                // Direct client-side fetch call to Groq Cloud endpoint
+                const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${GROQ_API_KEY}`
                     },
                     body: JSON.stringify({
-                        contents: [
-                            {
-                                role: 'user',
-                                parts: [
-                                    { text: `${systemPrompt}\n\nAbdi says: ${text}` }
-                                ]
-                            }
-                        ]
+                        model: 'llama-3.3-70b-versatile',
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: text }
+                        ],
+                        temperature: 0.7,
+                        max_tokens: 1000
                     })
                 });
 
@@ -231,10 +233,10 @@
                 document.getElementById(typingId).remove();
 
                 if (response.ok) {
-                    const replyText = data.candidates[0].content.parts[0].text;
+                    const replyText = data.choices[0].message.content;
                     appendMessage(replyText, 'tech', '🤖');
                 } else {
-                    appendMessage(`Error: ${data.error ? data.error.message : 'Something went wrong.'}`, 'tech', '🤖');
+                    appendMessage(`Error: ${data.error ? data.error.message : 'Something went wrong with Groq.'}`, 'tech', '🤖');
                 }
 
             } catch (error) {
