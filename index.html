@@ -211,6 +211,7 @@
         let GROQ_API_KEY = localStorage.getItem('groq_api_key') || '';
         let recognition = null;
         let isListening = false;
+        let voiceUnlocked = false;
 
         if (!GROQ_API_KEY) {
             GROQ_API_KEY = prompt("Sasa Abdi! Enter your Groq API Key here to get started:") || '';
@@ -223,12 +224,21 @@
         You live in Kenya and naturally mix English, Swahili, and Sheng (using words like 'maze', 'sawa', 'si mbaya', 'msee', 'kiongozi'). 
         Your primary role is to be a close, chill friend to have casual conversations with. You love discussing football, life in Meru, or just hanging out online. 
         CRITICAL RULE: Do NOT bring up his coding projects (People's Net, Mo Solutions, Gender Age Detector) or ask him about his developer progress unless he explicitly mentions them first. If he just wants a casual chat or to talk football, match his energy completely like a normal friend hanging out.
-        Never call him Abdirizack; always call him Moha. Keep your replies concise, casual, and easy to read.`;
+        Never call him Abdirizack; always call him Abdi. Keep your replies concise, casual, and easy to read.`;
 
         function resetApiKey() {
             localStorage.removeItem('groq_api_key');
             alert("Groq key cleared! The page will reload now.");
             location.reload();
+        }
+
+        // Forces browser voice engine to wake up on first user action
+        function unlockVoice() {
+            if (!voiceUnlocked && 'speechSynthesis' in window) {
+                const initialSilence = new SpeechSynthesisUtterance('');
+                window.speechSynthesis.speak(initialSilence);
+                voiceUnlocked = true;
+            }
         }
 
         // Voice output function
@@ -247,12 +257,12 @@
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRecognition();
-            recognition.continuous = false; // Stops listening after you finish speaking one statement
+            recognition.continuous = false; 
             recognition.interimResults = false;
-            // 'en-US' or 'sw-KE' works, 'en-US' usually picks up Kenyan mixed English/Sheng text better on smartphones
             recognition.lang = 'en-US'; 
 
             recognition.onstart = () => {
+                unlockVoice();
                 isListening = true;
                 micBtn.classList.add('listening');
                 micBtn.innerText = '🔴';
@@ -269,7 +279,6 @@
             recognition.onresult = (event) => {
                 const speechToText = event.results[0][0].transcript;
                 messageInput.value = speechToText;
-                // Automatically triggers the send function once you stop talking!
                 sendMessage(); 
             };
 
@@ -282,8 +291,9 @@
         }
 
         function toggleListening() {
+            unlockVoice();
             if (!recognition) {
-                alert("Maze Abdi, voice recognition haikubali kwa hii browser. Use Google Chrome on Android/Laptop!");
+                alert("Voice recognition is not supported in this browser. Please use Google Chrome!");
                 return;
             }
             if (isListening) {
@@ -294,6 +304,7 @@
         }
 
         async function sendMessage() {
+            unlockVoice();
             const text = messageInput.value.trim();
             if (text === '') return;
 
@@ -374,6 +385,7 @@
             }
         });
 
+        // Ensure engine loads voices immediately
         if ('speechSynthesis' in window) {
             window.speechSynthesis.getVoices();
         }
