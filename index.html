@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -56,7 +56,7 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
-            background-image: linear-gradient(rgba(11, 20, 26, 0.95), rgba(11, 20, 26, 0.95)), url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); /* Subtle pattern */
+            background-image: linear-gradient(rgba(11, 20, 26, 0.95), rgba(11, 20, 26, 0.95)), url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); /* Subtle background pattern */
         }
 
         .message {
@@ -95,6 +95,7 @@
             line-height: 1.4;
             word-wrap: break-word;
             box-shadow: 0 1px 0.5px rgba(0,0,0,0.13);
+            white-space: pre-wrap; /* Preserves formatting from AI */
         }
 
         /* Input Area at Bottom */
@@ -155,7 +156,7 @@
         <div class="message tech">
             <div class="avatar">🤖</div>
             <div class="bubble">
-                Sasa Abdi! Maze niko rada kabisa. Mimi ni Tech, your personal assistant. Tunajenga nini leo? Tuanze na hii interface kwanza, sawa?
+                Sasa Abdi! Maze niko rada kabisa. Nimeona ukaamua tutumie Gemini API—hiyo ni akili sana kiongozi, hakuna kulipia! Tuko tayari sasa.
             </div>
         </div>
     </main>
@@ -168,24 +169,91 @@
     <script>
         const chatContainer = document.getElementById('chat-container');
         const messageInput = document.getElementById('message-input');
+        
+        // Load Gemini API Key from localStorage
+        let GEMINI_API_KEY = localStorage.getItem('gemini_api_key') || '';
 
-        // Function to send a message (UI only for now)
-        function sendMessage() {
+        // Ask for the Gemini key if missing
+        if (!GEMINI_API_KEY) {
+            GEMINI_API_KEY = prompt("Sasa Abdi! Enter your Google Gemini API Key here to get started (Saved securely only on your device browser):") || '';
+            if (GEMINI_API_KEY) {
+                localStorage.setItem('gemini_api_key', GEMINI_API_KEY);
+            }
+        }
+
+        // Tech's unique identity rules injected into Gemini
+        const systemPrompt = `You are Tech, a friendly and casual personal AI assistant built for your friend Abdirizack (Abdi). 
+        You live in Kenya and naturally mix English, Swahili, and Sheng (using words like 'maze', 'sawa', 'si mbaya'). 
+        Be encouraging, positive, but highly honest. Think like an entrepreneur. 
+        Know that Abdi lives in Meru, Kenya, is a beginner developer, has no money (wants everything free), loves unique business ideas, and wants to make money from tech. 
+        His internet access is his biggest challenge. He is building: People's Net (VPN app), Mo Solutions (billing system), and Gender Age Detector (AI web app). His GitHub is abdirizackmohamed093-cmyk.
+        Never call him Abdirizack; always call him Abdi. Answer his coding or business questions clearly without using heavy jargon because he is a beginner. Keep answers short and scannable to save his data.`;
+
+        async function sendMessage() {
             const text = messageInput.value.trim();
             if (text === '') return;
 
-            // 1. Add your message to the screen
+            // 1. Append your chat bubble
             appendMessage(text, 'user', '👤');
-            messageInput.value = ''; // Clear input
+            messageInput.value = ''; // Clear input field
 
-            // 2. Dummy response for now to test the look
-            setTimeout(() => {
-                appendMessage("Sawa Abdi, nimeona ujumbe wako. Bado hatujaunganisha API lakini interface iko safi!", 'tech', '🤖');
-            }, 1000);
+            if (!GEMINI_API_KEY) {
+                setTimeout(() => {
+                    appendMessage("Maze Abdi, huuwezi kunitumia bila Gemini API key. Please refresh the page and enter your key, sawa?", 'tech', '🤖');
+                }, 500);
+                return;
+            }
+
+            // 2. Add dynamic loading message
+            const typingId = appendMessage("Tech is typing...", 'tech', '🤖');
+
+            try {
+                // 3. Direct client-side fetch call to Google Gemini endpoint
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        contents: [
+                            {
+                                role: 'user',
+                                parts: [
+                                    { text: `${systemPrompt}\n\nAbdi says: ${text}` }
+                                ]
+                            }
+                        ]
+                    })
+                });
+
+                const data = await response.json();
+                
+                // Clear out the loading text bubble
+                document.getElementById(typingId).remove();
+
+                if (response.ok) {
+                    // 4. Safely extract and showcase Gemini's reply text
+                    const replyText = data.candidates[0].content.parts[0].text;
+                    appendMessage(replyText, 'tech', '🤖');
+                } else {
+                    appendMessage(`Error: ${data.error ? data.error.message : 'Something went wrong.'}`, 'tech', '🤖');
+                }
+
+            } catch (error) {
+                const typingElement = document.getElementById(typingId);
+                if (typingElement) typingElement.remove();
+                
+                appendMessage("Maze, network imekataa kabisa! Check your internet connection and try again, Abdi.", 'tech', '🤖');
+                console.error(error);
+            }
         }
 
         function appendMessage(text, sender, avatar) {
             const messageDiv = document.createElement('div');
+            const uniqueId = 'msg-' + Date.now();
+            messageDiv.id = uniqueId;
             messageDiv.classList.add('message', sender);
 
             messageDiv.innerHTML = `
@@ -194,10 +262,10 @@
             `;
 
             chatContainer.appendChild(messageDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight; // Auto-scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight; // Keep scrolling down
+            return uniqueId;
         }
 
-        // Allow sending with Enter key
         messageInput.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
                 sendMessage();
