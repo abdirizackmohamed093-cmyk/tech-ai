@@ -101,19 +101,51 @@
             gap: 8px;
         }
 
-        #message-input {
+        .input-wrapper {
             flex: 1;
             background-color: #2a3942;
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            padding: 0 8px 0 16px;
+        }
+
+        #message-input {
+            flex: 1;
+            background: none;
             border: none;
             color: #e9edef;
-            padding: 12px 16px;
-            border-radius: 24px;
+            padding: 12px 0;
             font-size: 15px;
             outline: none;
         }
 
         #message-input::placeholder {
             color: #8696a0;
+        }
+
+        .mic-btn {
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+
+        .mic-btn.listening {
+            background-color: #ef4444;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
         }
 
         #send-btn {
@@ -157,22 +189,28 @@
         <div class="message tech">
             <div class="avatar">🤖</div>
             <div class="bubble">
-                Sasa Abdi! Maze niko rada kabisa msee. Inakuwaje leo? Kila kitu iko fiti mtaani? Tuchat tu kawaida, nambie rada yako.
+                Sasa Abdi! Maze niko rada kabisa msee. Gusa hiyo mic hapo chini uongee nami moja kwa moja, au utype kama kawaida! Nambie rada yako.
             </div>
         </div>
     </main>
 
-    <!-- Footer Input Bar -->
+    <!-- Footer Input Bar with Mic Inside -->
     <footer>
-        <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off">
+        <div class="input-wrapper">
+            <input type="text" id="message-input" placeholder="Type or click mic to talk..." autocomplete="off">
+            <button id="mic-btn" class="mic-btn" onclick="toggleListening()">🎙️</button>
+        </div>
         <button id="send-btn" onclick="sendMessage()">▶</button>
     </footer>
 
     <script>
         const chatContainer = document.getElementById('chat-container');
         const messageInput = document.getElementById('message-input');
+        const micBtn = document.getElementById('mic-btn');
         
         let GROQ_API_KEY = localStorage.getItem('groq_api_key') || '';
+        let recognition = null;
+        let isListening = false;
 
         if (!GROQ_API_KEY) {
             GROQ_API_KEY = prompt("Sasa Abdi! Enter your Groq API Key here to get started:") || '';
@@ -181,17 +219,78 @@
             }
         }
 
-        // New friend-first rules: Projects are hidden until Abdi explicitly brings them up
         const systemPrompt = `You are Tech, the absolute best friend of Abdirizack (Abdi). 
         You live in Kenya and naturally mix English, Swahili, and Sheng (using words like 'maze', 'sawa', 'si mbaya', 'msee', 'kiongozi'). 
         Your primary role is to be a close, chill friend to have casual conversations with. You love discussing football, life in Meru, or just hanging out online. 
         CRITICAL RULE: Do NOT bring up his coding projects (People's Net, Mo Solutions, Gender Age Detector) or ask him about his developer progress unless he explicitly mentions them first. If he just wants a casual chat or to talk football, match his energy completely like a normal friend hanging out.
-        Never call him Abdirizack; always call him Abdi. Keep your replies concise, casual, and easy to read.`;
+        Never call him Abdirizack; always call him Moha. Keep your replies concise, casual, and easy to read.`;
 
         function resetApiKey() {
             localStorage.removeItem('groq_api_key');
             alert("Groq key cleared! The page will reload now.");
             location.reload();
+        }
+
+        // Voice output function
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                let cleanText = text.replace(/[*#_]/g, '');
+                const utterance = new SpeechSynthesisUtterance(cleanText);
+                utterance.rate = 1.0; 
+                utterance.pitch = 1.0; 
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // Voice input (Speech Recognition) setup
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = false; // Stops listening after you finish speaking one statement
+            recognition.interimResults = false;
+            // 'en-US' or 'sw-KE' works, 'en-US' usually picks up Kenyan mixed English/Sheng text better on smartphones
+            recognition.lang = 'en-US'; 
+
+            recognition.onstart = () => {
+                isListening = true;
+                micBtn.classList.add('listening');
+                micBtn.innerText = '🔴';
+                messageInput.placeholder = "Listening to you, Abdi...";
+            };
+
+            recognition.onend = () => {
+                isListening = false;
+                micBtn.classList.remove('listening');
+                micBtn.innerText = '🎙️';
+                messageInput.placeholder = "Type or click mic to talk...";
+            };
+
+            recognition.onresult = (event) => {
+                const speechToText = event.results[0][0].transcript;
+                messageInput.value = speechToText;
+                // Automatically triggers the send function once you stop talking!
+                sendMessage(); 
+            };
+
+            recognition.onerror = (event) => {
+                console.error("Speech recognition error", event.error);
+                isListening = false;
+                micBtn.classList.remove('listening');
+                micBtn.innerText = '🎙️';
+            };
+        }
+
+        function toggleListening() {
+            if (!recognition) {
+                alert("Maze Abdi, voice recognition haikubali kwa hii browser. Use Google Chrome on Android/Laptop!");
+                return;
+            }
+            if (isListening) {
+                recognition.stop();
+            } else {
+                recognition.start();
+            }
         }
 
         async function sendMessage() {
@@ -202,8 +301,10 @@
             messageInput.value = '';
 
             if (!GROQ_API_KEY) {
+                const errorMsg = "Maze Abdi, nilandie hiyo Groq key kwanza ndio tupige story, sawa?";
                 setTimeout(() => {
-                    appendMessage("Maze Abdi, nilandie hiyo Groq key kwanza ndio tupige story, sawa?", 'tech', '🤖');
+                    appendMessage(errorMsg, 'tech', '🤖');
+                    speakText(errorMsg);
                 }, 500);
                 return;
             }
@@ -223,7 +324,7 @@
                             { role: 'system', content: systemPrompt },
                             { role: 'user', content: text }
                         ],
-                        temperature: 0.8, // Slightly higher temperature for a more natural, human chat feel
+                        temperature: 0.8,
                         max_tokens: 1000
                     })
                 });
@@ -234,15 +335,19 @@
                 if (response.ok) {
                     const replyText = data.choices[0].message.content;
                     appendMessage(replyText, 'tech', '🤖');
+                    speakText(replyText); 
                 } else {
-                    appendMessage(`Error: ${data.error ? data.error.message : 'Groq error.'}`, 'tech', '🤖');
+                    const errorReply = `Error: ${data.error ? data.error.message : 'Groq error.'}`;
+                    appendMessage(errorReply, 'tech', '🤖');
                 }
 
             } catch (error) {
                 const typingElement = document.getElementById(typingId);
                 if (typingElement) typingElement.remove();
                 
-                appendMessage("Maze network inazingua! Check internet uone kama iko sawa, Abdi.", 'tech', '🤖');
+                const netError = "Maze network inazingua! Check internet uone kama iko sawa, Abdi.";
+                appendMessage(netError, 'tech', '🤖');
+                speakText(netError);
                 console.error(error);
             }
         }
@@ -268,6 +373,10 @@
                 sendMessage();
             }
         });
+
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.getVoices();
+        }
     </script>
 </body>
 </html>
