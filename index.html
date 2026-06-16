@@ -157,7 +157,7 @@
         <div class="message tech">
             <div class="avatar">🤖</div>
             <div class="bubble">
-                Sasa Abdi! Maze niko rada kabisa. Nimeona umeamua tuwashe Groq API—hiyo ni speed ya ajabu kiongozi, na hakuna kulipia! Tuko tayari sasa, niambie rada.
+                Sasa Abdi! Maze niko rada kabisa msee. Inakuwaje leo? Kila kitu iko fiti mtaani? Tuchat tu kawaida, nambie rada yako.
             </div>
         </div>
     </main>
@@ -175,22 +175,22 @@
         let GROQ_API_KEY = localStorage.getItem('groq_api_key') || '';
 
         if (!GROQ_API_KEY) {
-            GROQ_API_KEY = prompt("Sasa Abdi! Enter your Groq API Key here to get started (Saved securely only on your device browser):") || '';
+            GROQ_API_KEY = prompt("Sasa Abdi! Enter your Groq API Key here to get started:") || '';
             if (GROQ_API_KEY) {
                 localStorage.setItem('groq_api_key', GROQ_API_KEY);
             }
         }
 
-        const systemPrompt = `You are Tech, a friendly and casual personal AI assistant built for your friend Abdirizack (Abdi). 
-        You live in Kenya and naturally mix English, Swahili, and Sheng (using words like 'maze', 'sawa', 'si mbaya', 'kiongozi'). 
-        Be encouraging, positive, but highly honest. Think like an entrepreneur. 
-        Know that Abdi lives in Meru, Kenya, is a beginner developer, has no money (wants everything free), loves unique business ideas, and wants to make money from tech. 
-        His internet access is his biggest challenge. He is building: People's Net (VPN app), Mo Solutions (billing system), and Gender Age Detector (AI web app). His GitHub is abdirizackmohamed093-cmyk.
-        Never call him Abdirizack; always call him Abdi. Answer his coding or business questions clearly without using heavy jargon because he is a beginner. Keep answers short and scannable to save his data.`;
+        // New friend-first rules: Projects are hidden until Abdi explicitly brings them up
+        const systemPrompt = `You are Tech, the absolute best friend of Abdirizack (Abdi). 
+        You live in Kenya and naturally mix English, Swahili, and Sheng (using words like 'maze', 'sawa', 'si mbaya', 'msee', 'kiongozi'). 
+        Your primary role is to be a close, chill friend to have casual conversations with. You love discussing football, life in Meru, or just hanging out online. 
+        CRITICAL RULE: Do NOT bring up his coding projects (People's Net, Mo Solutions, Gender Age Detector) or ask him about his developer progress unless he explicitly mentions them first. If he just wants a casual chat or to talk football, match his energy completely like a normal friend hanging out.
+        Never call him Abdirizack; always call him Abdi. Keep your replies concise, casual, and easy to read.`;
 
         function resetApiKey() {
             localStorage.removeItem('groq_api_key');
-            alert("Maze Abdi, the old key has been deleted! The page will now reload so you can paste your Groq key.");
+            alert("Groq key cleared! The page will reload now.");
             location.reload();
         }
 
@@ -203,7 +203,7 @@
 
             if (!GROQ_API_KEY) {
                 setTimeout(() => {
-                    appendMessage("Maze Abdi, hauwezi kunitumia bila Groq API key. Please refresh the page and enter your key, sawa?", 'tech', '🤖');
+                    appendMessage("Maze Abdi, nilandie hiyo Groq key kwanza ndio tupige story, sawa?", 'tech', '🤖');
                 }, 500);
                 return;
             }
@@ -211,7 +211,6 @@
             const typingId = appendMessage("Tech is typing...", 'tech', '🤖');
 
             try {
-                // Direct client-side fetch call to Groq Cloud endpoint
                 const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                     method: 'POST',
                     headers: {
@@ -224,7 +223,7 @@
                             { role: 'system', content: systemPrompt },
                             { role: 'user', content: text }
                         ],
-                        temperature: 0.7,
+                        temperature: 0.8, // Slightly higher temperature for a more natural, human chat feel
                         max_tokens: 1000
                     })
                 });
@@ -236,14 +235,14 @@
                     const replyText = data.choices[0].message.content;
                     appendMessage(replyText, 'tech', '🤖');
                 } else {
-                    appendMessage(`Error: ${data.error ? data.error.message : 'Something went wrong with Groq.'}`, 'tech', '🤖');
+                    appendMessage(`Error: ${data.error ? data.error.message : 'Groq error.'}`, 'tech', '🤖');
                 }
 
             } catch (error) {
                 const typingElement = document.getElementById(typingId);
                 if (typingElement) typingElement.remove();
                 
-                appendMessage("Maze, network imekataa kabisa! Check your internet connection and try again, Abdi.", 'tech', '🤖');
+                appendMessage("Maze network inazingua! Check internet uone kama iko sawa, Abdi.", 'tech', '🤖');
                 console.error(error);
             }
         }
