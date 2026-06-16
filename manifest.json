@@ -1,0 +1,18 @@
+
+{
+  "short_name": "Tech",
+  "name": "Tech - Personal AI Assistant",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/4712/4712035.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": ".",
+  "background_color": "#0b141a",
+  "theme_color": "#202c33",
+  "display": "standalone",
+  "orientation": "portrait"
+}
